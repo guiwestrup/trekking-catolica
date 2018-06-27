@@ -99,6 +99,13 @@
             android:textSize="@dimen/default_text_size" />
 
         <TextView
+            android:id="@+id/statusMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hello there!"
+            android:textColor="#ffffffff" />
+
+        <TextView
             android:id="@+id/longitude_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -121,9 +128,19 @@
             android:text="@string/location_settings_inadequate_warning"
             android:visibility="invisible" />
 
+        <TextView
+            android:id="@+id/counterMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="25dp"
+            android:paddingLeft="90dp"
+            android:text="Trekking"
+            android:textColor="#ffffffff"
+            android:textSize="24sp" />
+
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="155dp"
+            android:layout_width="187dp"
+            android:layout_height="64dp"
             android:orientation="vertical">
 
             <TextView
@@ -135,8 +152,8 @@
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="92dp"
+            android:layout_width="295dp"
+            android:layout_height="72dp"
             android:orientation="vertical">
 
             <TextView

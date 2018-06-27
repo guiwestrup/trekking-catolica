@@ -15,7 +15,6 @@
  */
 
 package com.google.android.gms.location.sample.locationupdates;
-
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -26,7 +25,9 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -59,27 +60,15 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Set;
-
+import bluetooth.BluetoothActivity;
 import bluetooth.ConnectionThread;
 import edu.catolicasc.trekking.location.TrekkingLocationSingleton;
 
-
-/**
- * Using location settings.
- * <p/>
- * Uses the {@link com.google.android.gms.location.SettingsApi} to ensure that the device's system
- * settings are properly configured for the app's location needs. When making a request to
- * Location services, the device's system settings may be in a state that prevents the app from
- * obtaining the location data that it needs. For example, GPS or Wi-Fi scanning may be switched
- * off. The {@code SettingsApi} makes it possible to determine if a device's system settings are
- * adequate for the location request, and to optionally invoke a dialog that allows the user to
- * enable the necessary settings.
- * <p/>
- * This sample allows the user to request location updates using the ACCESS_FINE_LOCATION setting
- * (as specified in AndroidManifest.xml).
- */
 public class MainActivity extends AppCompatActivity {
 
+    static TextView statusMessage;
+    static TextView counterMessage;
+    ConnectionThread connect;
     private static final String TAG = MainActivity.class.getSimpleName();
 
     /**
@@ -157,7 +146,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView mLastUpdateTimeTextView;
     private TextView mLatitudeTextView;
     private TextView mLongitudeTextView;
-    private ConnectionThread connect;
     // Labels.
     private String mLatitudeLabel;
     private String mLongitudeLabel;
@@ -179,6 +167,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        statusMessage = (TextView) findViewById(R.id.statusMessage);
+        counterMessage = (TextView) findViewById(R.id.counterMessage);
         setSupportActionBar(toolbar);
 
 
@@ -227,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
         createLocationCallback();
         createLocationRequest();
         buildLocationSettingsRequest();
-        connect = new ConnectionThread();
+        //connect = new ConnectionThread('');
     }
 
     /**
@@ -236,6 +226,7 @@ public class MainActivity extends AppCompatActivity {
      * @param savedInstanceState The activity state saved in the Bundle.
      */
     private void updateValuesFromBundle(Bundle savedInstanceState) {
+
         if (savedInstanceState != null) {
             // Update the value of mRequestingLocationUpdates from the Bundle, and make sure that
             // the Start Updates and Stop Updates buttons are correctly enabled or disabled.
@@ -299,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-                //aonde seta o local
+                //aonde seta o local    .
                 mCurrentLocation = locationResult.getLastLocation();
                 TrekkingLocationSingleton singleton = TrekkingLocationSingleton.getInstance();
                 singleton.addLocation(mCurrentLocation);
@@ -373,7 +364,40 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
+    public static Handler handler = new Handler() {
+        public void handleMessage(Message msg) {
 
+            /* Esse método é invocado na Activity principal
+                sempre que a thread de conexão Bluetooth recebe
+                uma mensagem.
+             */
+            Bundle bundle = msg.getData();
+            byte[] data = bundle.getByteArray("data");
+            String dataString= new String(data);
+
+            /* Aqui ocorre a decisão de ação, baseada na string
+                recebida. Caso a string corresponda à uma das
+                mensagens de status de conexão (iniciadas com --),
+                atualizamos o status da conexão conforme o código.
+             */
+            if(dataString.equals("---N"))
+                statusMessage.setText("Ocorreu um erro durante a conexão D:");
+            else if(dataString.equals("---S"))
+                statusMessage.setText("Conectado :D");
+            else {
+
+                /* Se a mensagem não for um código de status,
+                    então ela deve ser tratada pelo aplicativo
+                    como uma mensagem vinda diretamente do outro
+                    lado da conexão. Nesse caso, simplesmente
+                    atualizamos o valor contido no TextView do
+                    contador.
+                 */
+                counterMessage.setText(dataString);
+            }
+
+        }
+    };
     /**
      * Handles the Start Updates button and requests start of location updates. Does nothing if
      * updates have already been requested.

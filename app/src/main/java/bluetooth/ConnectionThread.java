@@ -1,5 +1,7 @@
 package bluetooth;
 
+import com.google.android.gms.location.sample.locationupdates.MainActivity;
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
@@ -7,108 +9,124 @@ import android.bluetooth.BluetoothSocket;
 import android.os.Bundle;
 import android.os.Message;
 
-import com.google.android.gms.location.sample.locationupdates.MainActivity;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.UUID;
 
-public class ConnectionThread {
+public class ConnectionThread extends Thread{
 
-    public class ConnectionThread extends Thread {
+    BluetoothSocket btSocket = null;
+    BluetoothServerSocket btServerSocket = null;
+    InputStream input = null;
+    OutputStream output = null;
+    String btDevAddress = null;
+    String myUUID = "00001101-0000-1000-8000-00805F9B34FB";
+    boolean server;
+    boolean running = false;
+    boolean isConnected = false;
 
-        BluetoothSocket btSocket = null;
-        BluetoothServerSocket btServerSocket = null;
-        InputStream input = null;
-        OutputStream output = null;
-        String btDevAddress = null;
-        String myUUID = "00001101-0000-1000-8000-00805F9B34FB";
-        boolean running = false;
-        boolean isConnected = false;
+    /*  Este construtor prepara o dispositivo para atuar como servidor.
+     */
+    public ConnectionThread() {
 
-        //      Este construtor prepara o dispositivo para atuar como servidor.
-        public ConnectionThread() {
-        }
+        this.server = true;
+    }
 
-        //      Este construtor prepara o dispositivo para atuar como cliente.
-//      Tem como argumento uma string contendo o endereço MAC do dispositivo
-//      Bluetooth para o qual deve ser solicitada uma conexão.
-        public ConnectionThread(String btDevAddress) {
-            this.btDevAddress = btDevAddress;
-        }
+    /*  Este construtor prepara o dispositivo para atuar como cliente.
+        Tem como argumento uma string contendo o endereço MAC do dispositivo
+    Bluetooth para o qual deve ser solicitada uma conexão.
+     */
+    public ConnectionThread(String btDevAddress) {
 
-        //O método run() contem as instruções que serão efetivamente realizadas em uma nova thread.
-        public void run() {
+        this.server = false;
+        this.btDevAddress = btDevAddress;
+    }
 
-//          Anuncia que a thread está sendo executada.
-//          Pega uma referência para o adaptador Bluetooth padrão.
-            this.running = true;
-            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+    /*  O método run() contem as instruções que serão efetivamente realizadas
+    em uma nova thread.
+     */
+    public void run() {
 
-//          Determina que ações executar dependendo se a thread está configurada
-//          para atuar como servidor ou cliente.
+        /*  Anuncia que a thread está sendo executada.
+            Pega uma referência para o adaptador Bluetooth padrão.
+         */
+        this.running = true;
+        BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        /*  Determina que ações executar dependendo se a thread está configurada
+        para atuar como servidor ou cliente.
+         */
+        if(this.server) {
+
+            /*  Servidor.
+             */
             try {
-//              Criando socket de cliente para comunicar com o arduino
+
+                /*  Cria um socket de servidor Bluetooth.
+                    O socket servidor será usado apenas para iniciar a conexão.
+                    Permanece em estado de espera até que algum cliente
+                estabeleça uma conexão.
+                 */
+                btServerSocket = btAdapter.listenUsingRfcommWithServiceRecord("Super Counter", UUID.fromString(myUUID));
+                btSocket = btServerSocket.accept();
+
+                /*  Se a conexão foi estabelecida corretamente, o socket
+                servidor pode ser liberado.
+                 */
+                if(btSocket != null) {
+
+                    btServerSocket.close();
+                }
+
+            } catch (IOException e) {
+
+                /*  Caso ocorra alguma exceção, exibe o stack trace para debug.
+                    Envia um código para a Activity principal, informando que
+                a conexão falhou.
+                 */
+                e.printStackTrace();
+                toMainActivity("---N".getBytes());
+            }
+
+
+        } else {
+
+            /*  Cliente.
+             */
+            try {
+
+                /*  Obtem uma representação do dispositivo Bluetooth com
+                endereço btDevAddress.
+                    Cria um socket Bluetooth.
+                 */
                 BluetoothDevice btDevice = btAdapter.getRemoteDevice(btDevAddress);
                 btSocket = btDevice.createRfcommSocketToServiceRecord(UUID.fromString(myUUID));
 
-//              Envia ao sistema um comando para cancelar qualquer processo de descoberta em execução.
+                /*  Envia ao sistema um comando para cancelar qualquer processo
+                de descoberta em execução.
+                 */
                 btAdapter.cancelDiscovery();
 
-                //Criacao de socket para servidor - não precisa pois o servidor é o arduino
-                //btServerSocket = btAdapter.listenUsingRfcommWithServiceRecord("Super Counter", UUID.fromString(myUUID));
-                //btSocket = btServerSocket.accept();
-
+                /*  Solicita uma conexão ao dispositivo cujo endereço é
+                btDevAddress.
+                    Permanece em estado de espera até que a conexão seja
+                estabelecida.
+                 */
                 if (btSocket != null) {
                     btSocket.connect();
                 }
 
-                output = btSocket.getOutputStream();
-
-                //output.write(-1);
-                //TODO: fazer loop na lista de coordenadas e enviar para o arduino
-
-                //Se a conexão foi estabelecida corretamente, o socket servidor pode ser liberado.
-                if (btSocket != null) {
-                    btServerSocket.close();
-                }
             } catch (IOException e) {
-//              Caso ocorra alguma exceção, exibe o stack trace para debug.
-//              Envia um código para a Activity principal, informando que a conexão falhou.
+
+                /*  Caso ocorra alguma exceção, exibe o stack trace para debug.
+                    Envia um código para a Activity principal, informando que
+                a conexão falhou.
+                 */
                 e.printStackTrace();
                 toMainActivity("---N".getBytes());
             }
-//
-////          Cliente.
-//            try {
-//
-////              Obtem uma representação do dispositivo Bluetooth com
-////              endereço btDevAddress.
-////              Cria um socket Bluetooth.
-////              BluetoothDevice btDevice = btAdapter.getRemoteDevice(btDevAddress);
-////              btSocket = btDevice.createRfcommSocketToServiceRecord(UUID.fromString(myUUID));
-//
-////              Envia ao sistema um comando para cancelar qualquer processo
-////              de descoberta em execução.
-//                btAdapter.cancelDiscovery();
-//
-////                Solicita uma conexão ao dispositivo cujo endereço é btDevAddress.
-////                Permanece em estado de espera até que a conexão seja estabelecida.
-//                if (btSocket != null) {
-//                    btSocket.connect();
-//                }
-//
-//            } catch (IOException e) {
-//
-//                /*  Caso ocorra alguma exceção, exibe o stack trace para debug.
-//                    Envia um código para a Activity principal, informando que
-//                a conexão falhou.
-//                 */
-//                e.printStackTrace();
-//                toMainActivity("---N".getBytes());
-//            }
 
         }
 
@@ -116,9 +134,7 @@ public class ConnectionThread {
             ...
          */
 
-        if(btSocket !=null)
-
-        {
+        if(btSocket != null) {
 
             /*  Envia um código para a Activity principal informando que a
             a conexão ocorreu com sucesso.
@@ -142,7 +158,7 @@ public class ConnectionThread {
                     Esta thread permanecerá em estado de escuta até que
                 a variável running assuma o valor false.
                  */
-                while (running) {
+                while(running) {
 
                     /*  Cria um byte array para armazenar temporariamente uma
                     mensagem recebida.
@@ -161,13 +177,13 @@ public class ConnectionThread {
                     que a mensagem foi transmitida por completo.
                      */
                     do {
-                        bytes = input.read(buffer, bytesRead + 1, 1);
-                        bytesRead += bytes;
-                    } while (buffer[bytesRead] != '\n');
+                        bytes = input.read(buffer, bytesRead+1, 1);
+                        bytesRead+=bytes;
+                    } while(buffer[bytesRead] != '\n');
 
                     /*  A mensagem recebida é enviada para a Activity principal.
                      */
-                    toMainActivity(Arrays.copyOfRange(buffer, 0, bytesRead - 1));
+                    toMainActivity(Arrays.copyOfRange(buffer, 0, bytesRead-1));
 
                 }
 
@@ -204,7 +220,7 @@ public class ConnectionThread {
      */
     public void write(byte[] data) {
 
-        if (output != null) {
+        if(output != null) {
             try {
 
                 /*  Transmite a mensagem.
@@ -243,6 +259,4 @@ public class ConnectionThread {
     public boolean isConnected() {
         return this.isConnected;
     }
-}
-
 }
